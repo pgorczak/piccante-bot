@@ -44,7 +44,7 @@ if __name__ == '__main__':
     req = requests.get(menu_url)
     soup = bs4.BeautifulSoup(req.text, 'html.parser')
     # Find menu section
-    menu_parent = soup.find(id='c822').find(class_="csc-textpic-text")
+    menu_parent = soup.find(id='c840').find(class_="csc-textpic-text")
     # Remove cruft and join into one big string
     # Necessary because of messy html
     menu_string = ' '.join(itt.takewhile(
