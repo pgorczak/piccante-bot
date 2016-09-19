@@ -1,13 +1,14 @@
-#!/usr/bin/env python
-
 import argparse
 import datetime
 import itertools as itt
+import json
 import re
+import sys
 
 import bs4
 import requests
 
+PY2 = sys.version_info[0] == 2
 
 menu_url = ('http://www.s-bar.de/ihr-betriebsrestaurant/'
             'aktuelle-speiseplaene.html')
@@ -16,30 +17,31 @@ day_regex = re.compile(r'\s?\w+,\ (\d\d)\.\s\w+\s20\d\d\s', re.UNICODE)
 additives_regex = re.compile(r'\s\([A-Z0-9,\s]+\)\s?', re.UNICODE)
 
 
+def zip_longest(*args, **kwargs):
+    if PY2:
+        return itt.izip_longest(*args, **kwargs)
+    else:
+        return itt.zip_longest(*args, **kwargs)
+
+
 # Grabbed directly from itertools recipes
 def grouper(iterable, n, fillvalue=None):
     "Collect data into fixed-length chunks or blocks"
     # grouper('ABCDEFG', 3, 'x') --> ABC DEF Gxx
     args = [iter(iterable)] * n
-    return itt.izip_longest(fillvalue=fillvalue, *args)
+    return zip_longest(fillvalue=fillvalue, *args)
 
 
 def format_menu(date, dishes):
     """ Format a datetime and a list of dishes as a markdown message. """
     # https://docs.python.org/2/library/datetime.html#strftime-strptime-behavior
-    menu = u"# Lunch: {0:%A}".format(date)
-    menu += u"\n\n## Piccante"
+    menu = u"*Today's lunch:* {0:%A}".format(date)
     for d in dishes:
-        menu += u'\n* {}'.format(d)
+        menu += u'\n\u2022 {}'.format(d)
     return menu
 
 
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(
-        description="Post today's lunch menu to Gitter.")
-    parser.add_argument('hook', metavar='url', type=str,
-                        help='The Gitter webhook URL.')
-    args = parser.parse_args()
+def post(hook_url):
     # Get and parse html
     req = requests.get(menu_url)
     soup = bs4.BeautifulSoup(req.text, 'html.parser')
@@ -60,4 +62,13 @@ if __name__ == '__main__':
     dishes = additives_regex.split(dishes_string)[:-1]
     message = format_menu(today, dishes)
     # Post
-    r = requests.post(args.hook, data={'message': message})
+    return requests.post(hook_url, data=json.dumps({'text': message}))
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(
+        description="Post today's lunch menu to Slack.")
+    parser.add_argument('hook', metavar='URL', type=str,
+                        help='The Slack WebHook URL.')
+    args = parser.parse_args()
+    post(args.hook).raise_for_status()
