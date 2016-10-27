@@ -18,7 +18,7 @@ daily_url = ('http://www.s-bar.de/ihr-betriebsrestaurant/'
 
 day_regex = re.compile(r'\s?\w+,\ (\d\d)\.\s\w+\s20\d\d\s', re.UNICODE)
 additives_regex = re.compile(r'\s\([A-Z0-9,\s]+\)\s?', re.UNICODE)
-daily_regex = re.compile(r'\s(F\.|S\.R\.).*?\s', re.UNICODE)
+daily_regex = re.compile(r'[A-Z][^a-z].*', re.UNICODE)
 
 
 def zip_longest(*args, **kwargs):
@@ -70,11 +70,11 @@ def daily():
     soup = bs4.BeautifulSoup(req.text, 'html.parser')
     # Find daily dishes section
     menu_parent = soup.find(id='c937').find(class_="csc-textpic-text")
-    # Again deal with crufty html
-    daily_string = ' '.join(menu_parent.stripped_strings)
-    # Separate via unknown abbreviated info and additives
-    dishes = daily_regex.split(daily_string+' ')[:-1]
-    return dishes[::2]
+    # Get all string in list items
+    items = (i.string for i in menu_parent.find_all('li'))
+    # Strip off abbreviated info and additives
+    dishes = (daily_regex.split(i)[0] for i in items)
+    return list(dishes)
 
 
 def post(hook_url):
