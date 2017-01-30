@@ -71,10 +71,10 @@ def daily():
     # Find daily dishes section
     menu_parent = soup.find(id='c937').find(class_="csc-textpic-text")
     # Get all string in list items
-    items = (i.string for i in menu_parent.find_all('li'))
+    items = (''.join(i.stripped_strings) for i in menu_parent.find_all('li'))
     # Strip off abbreviated info and additives
     dishes = (daily_regex.split(i)[0] for i in items)
-    return list(dishes)
+    return [d for d in dishes if not d.startswith('*Dieses')]
 
 
 def post(hook_url):
